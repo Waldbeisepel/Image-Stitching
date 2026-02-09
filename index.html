@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片拼接</title>
+    <!-- 添加网页图标 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖼️</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --accent-color: #e74c3c;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+            --gray-color: #95a5a6;
+            --border-radius: 12px;
+            --box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto; /* 允许页面滚动 */
+        }
+        
+        .container {
+            max-width: 1400px; /* 增加最大宽度 */
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px; /* 减小间距 */
+            flex: 1;
+            width: 100%;
+            /* 确保在没图片时不产生滚动 */
+            max-height: calc(100vh - 40px); /* 最大高度为视口高度减去容器padding */
+        }
+        
+        .settings-section {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 15px 20px; /* 减小内边距，使区域更窄 */
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            width: 100%;
+            /* 减小高度，使其更窄 */
+            min-height: auto; /* 移除固定最小高度 */
+            height: auto; /* 自适应内容高度 */
+            flex-shrink: 0; /* 防止被挤压 */
+        }
+        
+        .settings-section:hover {
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+        }
+        
+        .settings-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            gap: 20px; /* 保持适当的间距 */
+            height: auto; /* 自适应高度 */
+            width: 100%;
+        }
+        
+        .vertical-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px; /* 减小按钮间距 */
+            min-width: 160px; /* 适当宽度 */
+            flex-shrink: 0;
+            width: 22%;
+        }
+        
+        .btn {
+            border: none;
+            padding: 12px 14px; /* 适当的按钮大小 */
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            flex: 1;
+        }
+        
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+        
+        .btn:focus:not(:active)::after {
+            animation: ripple 1s ease-out;
+        }
+        
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(40, 40);
+                opacity: 0;
+            }
+        }
+        
+        .upload-btn {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(155, 89, 182, 0.4);
+        }
+        
+        .upload-btn:active {
+            transform: translateY(0);
+        }
+        
+        .primary-btn {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #27ae60 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+        }
+        
+        .primary-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(46, 204, 113, 0.4);
+        }
+        
+        .primary-btn:active {
+            transform: translateY(0);
+        }
+        
+        .secondary-btn {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #2980b9 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        .secondary-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(52, 152, 219, 0.4);
+        }
+        
+        .secondary-btn:active {
+            transform: translateY(0);
+        }
+        
+        .secondary-btn:disabled {
+            background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 4px 12px rgba(189, 195, 199, 0.3);
+        }
+        
+        .tertiary-btn {
+            background: linear-gradient(135deg, var(--accent-color) 0%, #c0392b 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+        }
+        
+        .tertiary-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(231, 76, 60, 0.4);
+        }
+        
+        .tertiary-btn:active {
+            transform: translateY(0);
+        }
+        
+        .settings-options {
+            background-color: #f8fafc;
+            border-radius: 8px;
+            padding: 15px; /* 减小内边距 */
+            display: flex;
+            flex-direction: column;
+            gap: 12px; /* 减小间距 */
+            flex: 1;
+            border: 1px solid #e9ecef;
+            height: auto; /* 自适应高度 */
+            width: 78%;
+        }
+        
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        
+        .setting-item label {
+            margin-bottom: 6px;
+            color: var(--dark-color);
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .setting-item label i {
+            color: var(--primary-color);
+            font-size: 0.85rem;
+        }
+        
+        .option-buttons {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        
+        .option-btn {
+            flex: 1;
+            padding: 8px 4px;
+            background-color: #f8f9fa;
+            border: 2px solid #e0e6ed;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--dark-color);
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+        }
+        
+        .option-btn:hover {
+            background-color: #e9ecef;
+            border-color: var(--primary-color);
+            transform: translateY(-1px);
+        }
+        
+        .option-btn.selected {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #2980b9 100%);
+            color: white;
+            border-color: var(--primary-color);
+            box-shadow: 0 3px 8px rgba(52, 152, 219, 0.2);
+        }
+        
+        .image-list-section {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px; /* 适当的边距 */
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            /* 关键：在不添加图片时，这个区域不会太长 */
+            flex: 1; /* 填充剩余空间 */
+            display: flex;
+            flex-direction: column;
+            min-height: 300px; /* 适当的最小高度，不要太长 */
+            max-height: 500px; /* 限制最大高度，防止太长 */
+            width: 100%;
+            overflow: hidden; /* 防止内部元素溢出 */
+        }
+        
+        .image-list-section:hover {
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+        }
+        
+        .upload-instructions {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1) 0%, rgba(52, 152, 219, 0.05) 100%);
+            border-radius: 10px;
+            padding: 40px 30px; /* 增加内边距，使区域看起来更饱满 */
+            margin-bottom: 20px;
+            text-align: center;
+            color: var(--dark-color);
+            border: 2px dashed rgba(52, 152, 219, 0.3);
+            transition: var(--transition);
+            width: 100%;
+            flex: 1; /* 使上传说明区域填充可用空间 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* 垂直居中 */
+            align-items: center; /* 水平居中 */
+        }
+        
+        .upload-instructions:hover {
+            border-color: rgba(52, 152, 219, 0.5);
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.15) 0%, rgba(52, 152, 219, 0.08) 100%);
+        }
+        
+        .upload-instructions i {
+            font-size: 48px; /* 增大图标，使区域看起来更饱满 */
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            background: rgba(52, 152, 219, 0.1);
+            padding: 20px;
+            border-radius: 50%;
+        }
+        
+        .upload-instructions div {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .upload-instructions div:last-child {
+            font-size: 0.95rem;
+            color: var(--gray-color);
+            font-weight: 400;
+        }
+        
+        .info-message {
+            padding: 14px;
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1) 0%, rgba(52, 152, 219, 0.05) 100%);
+            border-radius: 8px;
+            color: var(--dark-color);
+            margin-top: 16px;
+            display: none;
+            border-left: 3px solid var(--primary-color);
+            font-weight: 500;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+        
+        .info-message i {
+            color: var(--primary-color);
+            margin-right: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .image-list-container {
+            margin-bottom: 20px;
+            flex: 1; /* 图片列表容器填充剩余空间 */
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            /* 关键：限制高度，防止在没图片时区域过长 */
+            max-height: calc(100% - 120px); /* 减去其他元素的高度 */
+            overflow: hidden; /* 隐藏溢出 */
+        }
+        
+        .image-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1; /* 图片列表填充容器 */
+            overflow-y: auto; /* 只在有图片时显示滚动条 */
+            padding-right: 8px;
+            margin-top: 12px;
+            min-height: 60px; /* 较小的高度 */
+            width: 100%;
+        }
+        
+        .image-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+            transition: var(--transition);
+            background-color: white;
+            border: 1px solid #e9ecef;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-align: left;
+            min-height: 60px;
+            width: 100%;
+        }
+        
+        .image-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+        
+        .image-name-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .image-index {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #2980b9 100%);
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(52, 152, 219, 0.3);
+        }
+        
+        .image-name {
+            font-size: 0.9rem;
+            color: var(--dark-color);
+            font-weight: 500;
+            word-break: break-all;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+        
+        .image-controls {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .control-btn {
+            background: none;
+            border: none;
+            color: var(--gray-color);
+            cursor: pointer;
+            font-size: 0.9rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            background-color: rgba(149, 165, 166, 0.1);
+        }
+        
+        .control-btn:hover {
+            background-color: rgba(52, 152, 219, 0.15);
+            color: var(--primary-color);
+            transform: translateY(-1px);
+        }
+        
+        .control-btn.delete-btn:hover {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: var(--accent-color);
+        }
+        
+        .preview-container {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 16px;
+            background-color: white;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            flex-shrink: 0; /* 防止预览容器挤压图片列表 */
+            width: 100%;
+        }
+        
+        .success-message {
+            padding: 14px;
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.1) 0%, rgba(46, 204, 113, 0.05) 100%);
+            border-radius: 8px;
+            color: #155724;
+            margin-bottom: 16px;
+            display: none;
+            text-align: center;
+            border-left: 3px solid var(--secondary-color);
+            font-weight: 500;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+        
+        .success-message i {
+            color: var(--secondary-color);
+            margin-right: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .preview-content {
+            width: 100%;
+            overflow: visible;
+        }
+        
+        .loading-preview {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray-color);
+        }
+        
+        .loading-preview i {
+            font-size: 36px;
+            margin-bottom: 16px;
+            color: var(--primary-color);
+        }
+        
+        .loading-preview p {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        .preview-image {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 0 auto;
+            border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: var(--transition);
+        }
+        
+        .preview-image:hover {
+            transform: scale(1.01);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .drag-handle {
+            cursor: move;
+        }
+        
+        .sortable-ghost {
+            opacity: 0.6;
+            background-color: rgba(52, 152, 219, 0.1);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.2);
+        }
+        
+        .sortable-chosen {
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+        
+        .image-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .image-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 8px;
+        }
+        
+        .image-list::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #2980b9 100%);
+            border-radius: 8px;
+        }
+        
+        .image-list::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #2980b9 0%, #1c5a7a 100%);
+        }
+        
+        .drag-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.15) 0%, rgba(52, 152, 219, 0.08) 100%);
+            border: 3px dashed var(--primary-color);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            color: var(--dark-color);
+            font-size: 1.5rem;
+            font-weight: 700;
+            backdrop-filter: blur(5px);
+        }
+        
+        .drag-overlay.active {
+            opacity: 1;
+        }
+        
+        .drag-overlay i {
+            font-size: 60px;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 50%;
+            box-shadow: 0 8px 24px rgba(52, 152, 219, 0.3);
+        }
+        
+        .drag-overlay p {
+            margin-top: 12px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: var(--gray-color);
+        }
+        
+        /* 徽章样式保留，但不再使用 */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, #2980b9 100%);
+            color: white;
+            border-radius: 16px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+                max-width: 100%;
+            }
+            
+            .app-container {
+                gap: 15px;
+            }
+            
+            .settings-container {
+                flex-direction: column;
+                min-height: auto;
+            }
+            
+            .vertical-buttons {
+                min-width: 100%;
+                width: 100%;
+            }
+            
+            .settings-options {
+                width: 100%;
+            }
+            
+            .control-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 0.85rem;
+            }
+            
+            .option-buttons {
+                flex-direction: column;
+            }
+            
+            .image-list-section {
+                padding: 15px;
+                min-height: 250px;
+                max-height: 400px;
+            }
+            
+            .upload-instructions {
+                padding: 30px 20px;
+            }
+            
+            .upload-instructions i {
+                font-size: 36px;
+                padding: 15px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .settings-section, .image-list-section {
+                padding: 12px;
+            }
+            
+            .btn {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+            
+            .image-name {
+                font-size: 0.85rem;
+            }
+            
+            .settings-options {
+                padding: 12px;
+            }
+            
+            .option-btn {
+                padding: 6px 3px;
+                font-size: 0.75rem;
+            }
+            
+            .upload-instructions {
+                padding: 25px 15px;
+            }
+            
+            .upload-instructions i {
+                font-size: 32px;
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 拖拽覆盖层 -->
+    <div class="drag-overlay" id="dragOverlay">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <div>松开鼠标上传图片</div>
+        <p>支持 JPG、PNG、GIF 格式</p>
+    </div>
+    
+    <div class="container">
+        <div class="app-container">
+            <!-- 设置区域 -->
+            <section class="settings-section">
+                <!-- 删除了section-title部分 -->
+                <div class="settings-container">
+                    <div class="vertical-buttons">
+                        <!-- 上传按钮移动到合并按钮上面，文字改为"上传" -->
+                        <button class="btn upload-btn" id="uploadBtn">
+                            <i class="fas fa-cloud-upload-alt"></i> 上传
+                        </button>
+                        <button class="btn primary-btn" id="previewBtn">
+                            <i class="fas fa-eye"></i> 合并
+                        </button>
+                        <button class="btn secondary-btn" id="downloadBtn" disabled>
+                            <i class="fas fa-download"></i> 下载
+                        </button>
+                        <button class="btn tertiary-btn" id="resetBtn">
+                            <i class="fas fa-redo"></i> 重置
+                        </button>
+                    </div>
+                    
+                    <div class="settings-options">
+                        <div class="setting-item">
+                            <label for="outputMode"><i class="fas fa-layer-group"></i> 输出模式</label>
+                            <div class="option-buttons" id="modeButtons">
+                                <button class="option-btn selected" data-mode="vertical">纵向(垂直)</button>
+                                <button class="option-btn" data-mode="horizontal">横向(水平)</button>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <label for="outputFormat"><i class="fas fa-file-image"></i> 输出格式</label>
+                            <div class="option-buttons" id="formatButtons">
+                                <button class="option-btn" data-format="webp">WEBP</button>
+                                <button class="option-btn selected" data-format="jpeg">JPEG</button>
+                                <button class="option-btn" data-format="png">PNG</button>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <label for="outputQuality"><i class="fas fa-tachometer-alt"></i> 输出质量</label>
+                            <div class="option-buttons" id="qualityButtons">
+                                <button class="option-btn selected" data-quality="0.85">高质量</button>
+                                <button class="option-btn" data-quality="0.75">中质量</button>
+                                <button class="option-btn" data-quality="0.65">低质量</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 图片列表与合成预览合并区域 -->
+            <section class="image-list-section">
+                <!-- 删除了image-list-header部分 -->
+                
+                <!-- 上传说明 -->
+                <div class="upload-instructions" id="uploadInstructions">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <div>拖拽图片到页面任意位置，或点击"上传"按钮选择文件</div>
+                    <div>支持 JPG、PNG、GIF 格式</div>
+                </div>
+                
+                <div class="info-message" id="uploadInfo">
+                    <i class="fas fa-info-circle"></i> 已成功上传 <span id="imageCount">0</span> 张图片。您可以拖拽调整图片顺序。
+                </div>
+                
+                <div class="image-list-container">
+                    <div class="image-list" id="imageList">
+                        <!-- 图片列表为空时完全空白，不显示任何内容 -->
+                    </div>
+                </div>
+                
+                <!-- 合成预览图（合并到图片列表区域） -->
+                <div class="preview-container" id="previewContainer">
+                    <!-- 成功消息 -->
+                    <div class="success-message" id="successMessage">
+                        <i class="fas fa-check-circle"></i> 拼接图片预览已生成！
+                    </div>
+                    
+                    <div class="preview-content">
+                        <div class="loading-preview" id="loadingPreview" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>正在生成预览...</p>
+                        </div>
+                        <img id="previewImage" class="preview-image" src="" alt="合成预览" style="display: none;">
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 文件输入框 -->
+    <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
+    
+    <!-- 引入Sortable.js用于拖拽排序 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+    
+    <script>
+        // DOM元素
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInput = document.getElementById('fileInput');
+        const imageList = document.getElementById('imageList');
+        const uploadInfo = document.getElementById('uploadInfo');
+        const imageCount = document.getElementById('imageCount');
+        const previewBtn = document.getElementById('previewBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const loadingPreview = document.getElementById('loadingPreview');
+        const successMessage = document.getElementById('successMessage');
+        const dragOverlay = document.getElementById('dragOverlay');
+        const uploadInstructions = document.getElementById('uploadInstructions');
+        
+        // 设置相关元素
+        const modeButtons = document.getElementById('modeButtons');
+        const formatButtons = document.getElementById('formatButtons');
+        const qualityButtons = document.getElementById('qualityButtons');
+        
+        // 存储上传的图片
+        let images = [];
+        // 存储生成的最终图片URL
+        let generatedImageUrl = null;
+        // 当前选择的输出模式
+        let currentMode = 'vertical';
+        // 当前选择的输出格式
+        let currentFormat = 'jpeg';
+        // 当前选择的质量值 - 默认改为高质量(0.85)
+        let currentQuality = 0.85;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化拖拽排序
+            initSortable();
+            
+            // 绑定事件
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelect);
+            previewBtn.addEventListener('click', generatePreview);
+            resetBtn.addEventListener('click', resetAllImages);
+            downloadBtn.addEventListener('click', downloadCombinedImage);
+            
+            // 设置全局拖拽上传
+            setupGlobalDragAndDrop();
+            
+            // 初始时显示上传说明
+            uploadInstructions.style.display = 'flex'; // 改为flex以支持居中
+            uploadInfo.style.display = 'none';
+            
+            // 初始化设置按钮
+            initOptionButtons();
+        });
+        
+        // 初始化设置按钮
+        function initOptionButtons() {
+            // 输出模式按钮
+            const modeBtns = modeButtons.querySelectorAll('.option-btn');
+            modeBtns.forEach(button => {
+                button.addEventListener('click', function() {
+                    modeBtns.forEach(btn => btn.classList.remove('selected'));
+                    this.classList.add('selected');
+                    currentMode = this.dataset.mode;
+                    resetPreviewState();
+                });
+            });
+            
+            // 输出格式按钮
+            const formatBtns = formatButtons.querySelectorAll('.option-btn');
+            formatBtns.forEach(button => {
+                button.addEventListener('click', function() {
+                    formatBtns.forEach(btn => btn.classList.remove('selected'));
+                    this.classList.add('selected');
+                    currentFormat = this.dataset.format;
+                    resetPreviewState();
+                });
+            });
+            
+            // 输出质量按钮 - 默认选中高质量
+            const qualityBtns = qualityButtons.querySelectorAll('.option-btn');
+            qualityBtns.forEach(button => {
+                button.addEventListener('click', function() {
+                    qualityBtns.forEach(btn => btn.classList.remove('selected'));
+                    this.classList.add('selected');
+                    currentQuality = parseFloat(this.dataset.quality);
+                    resetPreviewState();
+                });
+            });
+            
+            // 确保高质量按钮默认选中
+            document.querySelector('#qualityButtons .option-btn[data-quality="0.85"]').classList.add('selected');
+        }
+        
+        // 设置全局拖拽上传
+        function setupGlobalDragAndDrop() {
+            // 防止默认的拖拽行为（如打开图片）
+            document.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
+            document.addEventListener('dragenter', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // 显示拖拽覆盖层
+                dragOverlay.classList.add('active');
+            });
+            
+            document.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // 只有当鼠标离开文档时才隐藏覆盖层
+                if (e.clientX <= 0 || e.clientY <= 0 || 
+                    e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+                    dragOverlay.classList.remove('active');
+                }
+            });
+            
+            document.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // 隐藏拖拽覆盖层
+                dragOverlay.classList.remove('active');
+                
+                // 处理拖拽的文件
+                const files = Array.from(e.dataTransfer.files);
+                handleFiles(files);
+            });
+        }
+        
+        // 初始化拖拽排序
+        function initSortable() {
+            new Sortable(imageList, {
+                animation: 200,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                handle: '.drag-handle',
+                direction: 'vertical',
+                onEnd: function() {
+                    // 更新图片顺序
+                    const imageItems = Array.from(imageList.querySelectorAll('.image-item'));
+                    images = imageItems.map(item => {
+                        const id = item.dataset.id;
+                        return images.find(img => img.id === id);
+                    });
+                    
+                    // 更新序号
+                    updateImageIndexes();
+                    
+                    // 如果已有预览图，则重置预览状态
+                    resetPreviewState();
+                }
+            });
+        }
+        
+        // 处理文件选择
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            handleFiles(files);
+            fileInput.value = ''; // 重置文件输入
+        }
+        
+        // 处理上传的文件
+        function handleFiles(files) {
+            const imageFiles = files.filter(file => file.type.startsWith('image/'));
+            
+            if (imageFiles.length === 0) {
+                alert('请选择图片文件！');
+                return;
+            }
+            
+            // 不限制图片数量，直接处理每个图片文件
+            imageFiles.forEach(file => {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const imageData = e.target.result;
+                    addImageToList(imageData, file.name);
+                };
+                
+                reader.readAsDataURL(file);
+            });
+            
+            // 如果有图片上传，隐藏上传说明
+            if (images.length + imageFiles.length > 0) {
+                uploadInstructions.style.display = 'none';
+            }
+        }
+        
+        // 添加图片到列表
+        function addImageToList(imageData, fileName) {
+            const id = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            // 创建图片对象
+            const imageObj = {
+                id: id,
+                data: imageData,
+                name: fileName
+            };
+            
+            images.push(imageObj);
+            
+            // 创建图片项DOM元素
+            const imageItem = document.createElement('div');
+            imageItem.className = 'image-item';
+            imageItem.dataset.id = id;
+            
+            const index = images.length;
+            imageItem.innerHTML = `
+                <div class="image-name-container">
+                    <div class="image-index">${index}</div>
+                    <div class="image-name" title="${fileName}">${fileName}</div>
+                </div>
+                <div class="image-controls">
+                    <button class="control-btn drag-handle" title="拖拽排序">
+                        <i class="fas fa-arrows-alt"></i>
+                    </button>
+                    <button class="control-btn delete-btn btn-delete" title="删除">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            
+            // 添加到图片列表
+            imageList.appendChild(imageItem);
+            
+            // 绑定删除事件
+            imageItem.querySelector('.btn-delete').addEventListener('click', () => deleteImage(id));
+            
+            // 更新UI
+            updateImageCount();
+            uploadInfo.style.display = 'block';
+            
+            // 如果已有预览图，则重置预览状态
+            resetPreviewState();
+        }
+        
+        // 删除图片
+        function deleteImage(id) {
+            // 从数组中移除
+            images = images.filter(img => img.id !== id);
+            
+            // 从DOM中移除
+            const imageItem = document.querySelector(`.image-item[data-id="${id}"]`);
+            if (imageItem) {
+                imageItem.remove();
+            }
+            
+            // 更新序号
+            updateImageIndexes();
+            
+            // 更新UI
+            updateImageCount();
+            
+            // 如果没有图片了，隐藏信息提示，显示上传说明
+            if (images.length === 0) {
+                uploadInfo.style.display = 'none';
+                previewContainer.style.display = 'none';
+                downloadBtn.disabled = true;
+                uploadInstructions.style.display = 'flex'; // 改为flex以支持居中
+            }
+            
+            // 如果已有预览图，则重置预览状态
+            resetPreviewState();
+        }
+        
+        // 更新图片序号
+        function updateImageIndexes() {
+            const imageItems = imageList.querySelectorAll('.image-item');
+            imageItems.forEach((item, index) => {
+                const indexElement = item.querySelector('.image-index');
+                if (indexElement) {
+                    indexElement.textContent = index + 1;
+                }
+            });
+        }
+        
+        // 更新图片计数
+        function updateImageCount() {
+            imageCount.textContent = images.length;
+        }
+        
+        // 重置预览状态
+        function resetPreviewState() {
+            if (generatedImageUrl) {
+                URL.revokeObjectURL(generatedImageUrl);
+                generatedImageUrl = null;
+            }
+            
+            downloadBtn.disabled = true;
+            previewBtn.innerHTML = '<i class="fas fa-eye"></i> 合并';
+            previewBtn.disabled = false;
+        }
+        
+        // 生成拼接图片预览
+        function generatePreview() {
+            if (images.length === 0) {
+                alert('请先上传图片！');
+                return;
+            }
+            
+            // 显示加载状态
+            previewBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在合并...';
+            previewBtn.disabled = true;
+            downloadBtn.disabled = true;
+            
+            // 显示预览容器
+            previewContainer.style.display = 'block';
+            
+            // 显示预览加载状态
+            previewImage.style.display = 'none';
+            loadingPreview.style.display = 'block';
+            successMessage.style.display = 'none';
+            
+            // 创建离屏canvas
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 加载所有图片
+            const imagePromises = images.map(imgObj => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = imgObj.data;
+                });
+            });
+            
+            Promise.all(imagePromises).then(loadedImages => {
+                let canvasWidth, canvasHeight;
+                
+                // 先计算尺寸
+                if (currentMode === 'vertical') {
+                    // 纵向拼接：计算总高度和最大宽度
+                    let totalHeight = 0;
+                    let maxWidth = 0;
+                    
+                    loadedImages.forEach(img => {
+                        totalHeight += img.naturalHeight || img.height;
+                        const width = img.naturalWidth || img.width;
+                        if (width > maxWidth) maxWidth = width;
+                    });
+                    
+                    canvasWidth = maxWidth;
+                    canvasHeight = totalHeight;
+                } else {
+                    // 横向拼接：计算总宽度和最大高度
+                    let totalWidth = 0;
+                    let maxHeight = 0;
+                    
+                    loadedImages.forEach(img => {
+                        totalWidth += img.naturalWidth || img.width;
+                        const height = img.naturalHeight || img.height;
+                        if (height > maxHeight) maxHeight = height;
+                    });
+                    
+                    canvasWidth = totalWidth;
+                    canvasHeight = maxHeight;
+                }
+                
+                // 设置canvas尺寸 - 必须在绘制前设置
+                canvas.width = canvasWidth;
+                canvas.height = canvasHeight;
+                
+                // 填充白色背景 - 必须在绘制图片前填充
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                
+                if (currentMode === 'vertical') {
+                    // 竖向拼接所有图片
+                    let currentY = 0;
+                    loadedImages.forEach((img, index) => {
+                        // 使用自然尺寸
+                        const imgWidth = img.naturalWidth || img.width;
+                        const imgHeight = img.naturalHeight || img.height;
+                        
+                        // 计算居中位置
+                        const x = (canvasWidth - imgWidth) / 2;
+                        // 确保绘制位置正确
+                        ctx.drawImage(img, x, currentY, imgWidth, imgHeight);
+                        currentY += imgHeight;
+                    });
+                } else {
+                    // 横向拼接所有图片
+                    let currentX = 0;
+                    loadedImages.forEach((img, index) => {
+                        // 使用自然尺寸
+                        const imgWidth = img.naturalWidth || img.width;
+                        const imgHeight = img.naturalHeight || img.height;
+                        
+                        // 计算居中位置
+                        const y = (canvasHeight - imgHeight) / 2;
+                        // 确保绘制位置正确
+                        ctx.drawImage(img, currentX, y, imgWidth, imgHeight);
+                        currentX += imgWidth;
+                    });
+                }
+                
+                // 生成预览图片URL
+                let mimeType, quality;
+                
+                switch(currentFormat) {
+                    case 'jpeg':
+                        mimeType = 'image/jpeg';
+                        quality = currentQuality;
+                        break;
+                    case 'png':
+                        mimeType = 'image/png';
+                        quality = undefined; // PNG不支持质量参数
+                        break;
+                    case 'webp':
+                        mimeType = 'image/webp';
+                        quality = currentQuality;
+                        break;
+                    default:
+                        mimeType = 'image/jpeg';
+                        quality = currentQuality;
+                }
+                
+                // 使用toDataURL
+                const dataUrl = canvas.toDataURL(mimeType, quality);
+                
+                // 释放之前的URL
+                if (generatedImageUrl && generatedImageUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(generatedImageUrl);
+                }
+                
+                // 设置预览图
+                previewImage.src = dataUrl;
+                previewImage.alt = '合成预览图';
+                previewImage.style.display = 'block';
+                previewImage.style.maxWidth = '100%';
+                previewImage.style.height = 'auto';
+                loadingPreview.style.display = 'none';
+                
+                // 显示成功消息
+                successMessage.style.display = 'block';
+                
+                // 恢复按钮状态并启用下载按钮
+                previewBtn.innerHTML = '<i class="fas fa-eye"></i> 合并';
+                previewBtn.disabled = false;
+                downloadBtn.disabled = false;
+                
+                // 存储数据URL用于下载
+                generatedImageUrl = dataUrl;
+                
+            }).catch(error => {
+                console.error('生成预览时出错:', error);
+                loadingPreview.innerHTML = '<i class="fas fa-exclamation-triangle"></i><p>生成预览失败，请重试</p>';
+                
+                // 恢复按钮状态
+                previewBtn.innerHTML = '<i class="fas fa-eye"></i> 合并';
+                previewBtn.disabled = false;
+            });
+        }
+        
+        // 下载拼接图片
+        function downloadCombinedImage() {
+            if (!generatedImageUrl) {
+                alert('请先生成预览！');
+                return;
+            }
+            
+            let fileExtension;
+            switch(currentFormat) {
+                case 'jpeg':
+                    fileExtension = 'jpg';
+                    break;
+                case 'png':
+                    fileExtension = 'png';
+                    break;
+                case 'webp':
+                    fileExtension = 'webp';
+                    break;
+                default:
+                    fileExtension = 'jpg';
+            }
+            
+            const fileName = `拼接图片_${new Date().getTime()}.${fileExtension}`;
+            
+            // 创建下载链接
+            const a = document.createElement('a');
+            a.href = generatedImageUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        
+        // 重置所有图片
+        function resetAllImages() {
+            // 直接重置，不显示确认对话框
+            images = [];
+            imageList.innerHTML = '';
+            uploadInfo.style.display = 'none';
+            previewContainer.style.display = 'none';
+            uploadInstructions.style.display = 'flex'; // 改为flex以支持居中
+            
+            // 释放生成的图片URL
+            if (generatedImageUrl) {
+                if (generatedImageUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(generatedImageUrl);
+                }
+                generatedImageUrl = null;
+            }
+            
+            // 重置设置到默认值
+            // 重置输出模式
+            const modeBtns = document.querySelectorAll('#modeButtons .option-btn');
+            modeBtns.forEach(btn => btn.classList.remove('selected'));
+            modeBtns[0].classList.add('selected');
+            currentMode = 'vertical';
+            
+            // 重置输出格式
+            const formatBtns = document.querySelectorAll('#formatButtons .option-btn');
+            formatBtns.forEach(btn => btn.classList.remove('selected'));
+            formatBtns[1].classList.add('selected');
+            currentFormat = 'jpeg';
+            
+            // 重置输出质量 - 重置到高质量(0.85)
+            const qualityBtns = document.querySelectorAll('#qualityButtons .option-btn');
+            qualityBtns.forEach(btn => btn.classList.remove('selected'));
+            document.querySelector('#qualityButtons .option-btn[data-quality="0.85"]').classList.add('selected');
+            currentQuality = 0.85;
+            
+            // 重置按钮状态
+            downloadBtn.disabled = true;
+            previewBtn.innerHTML = '<i class="fas fa-eye"></i> 合并';
+            previewBtn.disabled = false;
+            
+            // 更新UI
+            updateImageCount();
+        }
+    </script>
+</body>
+</html>
